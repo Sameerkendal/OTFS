@@ -29,7 +29,7 @@ clc
 %   "SP_LMMSE"
 %
 % Main addition:
-%   Ch_outList = ["Matrix","FIR Filt."]
+%   Ch_outList = ["Matrix","FIR Filt.","AWGN"]
 %   This runs both matrix-based channel output and FIR Filt. channel output
 %   in the same simulation and plots both BER/FER curves.
 % ============================================================
@@ -39,7 +39,7 @@ clc
 % =========================
 colors = {'r','g','c','m','y','k','b',[0.85 0.33 0.10],[0.49 0.18 0.56],[0.47 0.67 0.19]};
 marker = {'o','+','*','s','d','^','x','p','v','>'};
-
+linestyleorder = {'-','-','-', '--','--','--',':',':',':', '-.','-.','-.',};
 %% =========================
 % OTFS parameters
 % =========================
@@ -79,7 +79,7 @@ seedGen = 1:50:5000;
 %% =========================
 % User switches
 % =========================
-Ch_outList            = ["Matrix","FIR Filt."];       % run both and compare curves
+Ch_outList            = ["Matrix","FIR Filt.","AWGN"];       % run both and compare curves
 VariantList           = "RCP";              % "CP" or "RCP"
 ChannelEstimationList = ["Perfect","SP"];       % "Perfect", "Estimator", "Noisy", "SP"
 ModulationList        = ["OTFS"];          % "OTFS", "OFDM", "QAM"
@@ -474,73 +474,74 @@ for Ch_out = Ch_outList
                                     %% ============================================
                                     % TRUE CHANNEL CONSTRUCTION
                                     % ============================================
-                                    max_speed = 12000;
+                                    if (Ch_out ~= "AWGN" && Ch_out ~="AWGN2")
+                                        max_speed = 12000;
 
-                                    [chan_coef, delay_taps, Doppler_taps, taps] = ...
-                                        Generate_delay_Doppler_channel_parameters( ...
-                                            N, M, car_fre, delta_f, T, max_speed, seed, 1);
+                                        [chan_coef, delay_taps, Doppler_taps, taps] = ...
+                                            Generate_delay_Doppler_channel_parameters( ...
+                                                N, M, car_fre, delta_f, T, max_speed, seed, 1);
 
-                                    L_set = unique(delay_taps);
-                                    Lmax = max(delay_taps);
+                                        L_set = unique(delay_taps);
+                                        Lmax = max(delay_taps);
 
-                                    if strcmp(Variant, 'CP')
-                                        assert(length_cp >= Lmax, ...
-                                            'CP length must be >= maximum delay tap for FIR Filt. and Matrix equivalence.');
-                                    end
+                                        if strcmp(Variant, 'CP')
+                                            assert(length_cp >= Lmax, ...
+                                                'CP length must be >= maximum delay tap for FIR Filt. and Matrix equivalence.');
+                                        end
 
-                                    l_i_true = delay_taps(:).';
-                                    g_i_true = chan_coef(:).';
-                                    k_i_true = Doppler_taps(:).';
+                                        l_i_true = delay_taps(:).';
+                                        g_i_true = chan_coef(:).';
+                                        k_i_true = Doppler_taps(:).';
 
-                                    % UNIFIED PHASE VARIABLES (Matching FIR Filt. exactly)
-                                    Fs = M * delta_f;
-                                    Doppler_resolution = 1 / (N * T);
-                                    f_d_taps_exact = k_i_true * Doppler_resolution;
+                                        % UNIFIED PHASE VARIABLES (Matching FIR Filt. exactly)
+                                        Fs = M * delta_f;
+                                        Doppler_resolution = 1 / (N * T);
+                                        f_d_taps_exact = k_i_true * Doppler_resolution;
 
-                                    switch Variant
+                                        switch Variant
 
-                                        case 'RCP'
-                                            gs_true = zeros(Lmax+1, MN);
+                                            case 'RCP'
+                                                gs_true = zeros(Lmax+1, MN);
 
-                                            for q = 0:MN-1
-                                                for i = 1:taps
-                                                    % exact exponential
-                                                    physical_phase = exp(1i * 2 * pi * f_d_taps_exact(i) * (q - l_i_true(i)) / Fs);
-                                                    gs_true(l_i_true(i)+1, q+1) = gs_true(l_i_true(i)+1, q+1) + ...
-                                                        g_i_true(i) * physical_phase;
-                                                end
-                                            end
-
-                                            G_true = zeros(MN, MN);
-                                            for q = 0:MN-1
-                                                for ell = 0:Lmax
-                                                    G_true(q+1, mod(q-ell, MN)+1) = gs_true(ell+1, q+1);
-                                                end
-                                            end
-
-                                        case 'CP'
-                                            gs_true = zeros(Lmax+1, N*(M+length_cp));
-
-                                            for q = 0:N*(M+length_cp)-1
-                                                for i = 1:taps
-                                                    % exact exponential
-                                                    physical_phase = exp(1i * 2 * pi * f_d_taps_exact(i) * (q - l_i_true(i)) / Fs);
-                                                    gs_true(l_i_true(i)+1, q+1) = gs_true(l_i_true(i)+1, q+1) + ...
-                                                        g_i_true(i) * physical_phase;
-                                                end
-                                            end
-
-                                            G_true = zeros(N*M,N*M);
-                                            for n = 0:N-1
-                                                for m = 0:M-1
-                                                    for ell = 0:Lmax
-                                                        G_true(m+n*M+1, n*M+mod(m-ell,M)+1) = ...
-                                                            gs_true(ell+1, m+n*(M+length_cp)+1);
+                                                for q = 0:MN-1
+                                                    for i = 1:taps
+                                                        % exact exponential
+                                                        physical_phase = exp(1i * 2 * pi * f_d_taps_exact(i) * (q - l_i_true(i)) / Fs);
+                                                        gs_true(l_i_true(i)+1, q+1) = gs_true(l_i_true(i)+1, q+1) + ...
+                                                            g_i_true(i) * physical_phase;
                                                     end
                                                 end
-                                            end
-                                    end
 
+                                                G_true = zeros(MN, MN);
+                                                for q = 0:MN-1
+                                                    for ell = 0:Lmax
+                                                        G_true(q+1, mod(q-ell, MN)+1) = gs_true(ell+1, q+1);
+                                                    end
+                                                end
+
+                                            case 'CP'
+                                                gs_true = zeros(Lmax+1, N*(M+length_cp));
+
+                                                for q = 0:N*(M+length_cp)-1
+                                                    for i = 1:taps
+                                                        % exact exponential
+                                                        physical_phase = exp(1i * 2 * pi * f_d_taps_exact(i) * (q - l_i_true(i)) / Fs);
+                                                        gs_true(l_i_true(i)+1, q+1) = gs_true(l_i_true(i)+1, q+1) + ...
+                                                            g_i_true(i) * physical_phase;
+                                                    end
+                                                end
+
+                                                G_true = zeros(N*M,N*M);
+                                                for n = 0:N-1
+                                                    for m = 0:M-1
+                                                        for ell = 0:Lmax
+                                                            G_true(m+n*M+1, n*M+mod(m-ell,M)+1) = ...
+                                                                gs_true(ell+1, m+n*(M+length_cp)+1);
+                                                        end
+                                                    end
+                                                end
+                                        end
+                                    end
                                     %% ============================================
                                     % CHANNEL OUTPUT
                                     % ============================================
@@ -625,6 +626,16 @@ for Ch_out = Ch_outList
 
                                             noise = sqrt(noiseVar/2) * (randn(size(r_clean)) + 1i*randn(size(r_clean)));
                                             r = r_clean + noise;
+
+                                        case "AWGN"
+                                            G_true = eye(MN);
+                                            L_set=0;
+                                            Lmax=0;
+                                            length_cp=0;
+                                            gs_true = ones(Lmax+1, N*(M+length_cp));
+                                            r=s;
+                                            noise = sqrt(noiseVar/2) * (randn(size(r)) + 1i*randn(size(r)));
+                                            r = r + noise;
 
                                         otherwise
                                             error('Unknown channel Output option.');
@@ -882,7 +893,7 @@ for Ch_out = Ch_outList
 
                                             trellis = poly2trellis(7, [171 133]);
                                             rxSoft = reshape(qamdemod(estdata, M_mod, 'gray', ...
-                                                'OutputType', 'llr', 'NoiseVariance', noiseVar), ...
+                                                'OutputType', 'approxllr', 'NoiseVariance', noiseVar), ...
                                                 N_bits_perfram, 1);
 
                                             traceback = 35;
@@ -900,7 +911,7 @@ for Ch_out = Ch_outList
                                             iBIL = true;
 
                                             rxSoft = reshape(qamdemod(estdata, M_mod, 'gray', ...
-                                                'OutputType', 'llr', 'NoiseVariance', noiseVar), ...
+                                                'OutputType', 'approxllr', 'NoiseVariance', noiseVar), ...
                                                 N_bits_perfram, 1);
 
                                             recPolar = nrRateRecoverPolar(rxSoft, K_crc, E, iBIL);
@@ -930,7 +941,7 @@ for Ch_out = Ch_outList
                                             iBIL = true;
 
                                             rxSoft = reshape(qamdemod(softSymUnit, M_mod, 'gray', ...
-                                                'OutputType', 'llr', ...
+                                                'OutputType', 'approxllr', ...
                                                 'NoiseVariance', noiseVar / max(Pd, eps), ...
                                                 'UnitAveragePower', true), ...
                                                 N_bits_perfram, 1);
@@ -944,7 +955,7 @@ for Ch_out = Ch_outList
                                             trellis = poly2trellis(7, [171 133]);
 
                                             rxSoft = reshape(qamdemod(softSymUnit, M_mod, 'gray', ...
-                                                'OutputType', 'llr', ...
+                                                'OutputType', 'approxllr', ...
                                                 'NoiseVariance', noiseVar / max(Pd, eps), ...
                                                 'UnitAveragePower', true), ...
                                                 N_bits_perfram, 1);
@@ -1027,10 +1038,11 @@ hold on;
 for i = 1:curveCount
     cidx = mod(i-1, numel(colors)) + 1;
     midx = mod(i-1, numel(marker)) + 1;
+    lidx = mod(i-1,numel(linestyleorder))+1;
 
-    yplot = max(FER_curves{i}, 1e-4);
+    yplot = FER_curves{i};
     semilogy(SNR_dB, yplot, 'LineWidth', 1.8, ...
-        'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8);
+        'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8,'LineStyle',linestyleorder{lidx});
 end
 grid on;
 grid minor;
@@ -1038,7 +1050,7 @@ ax = gca;
 ax.YScale = 'log';
 ax.YMinorGrid = 'on';
 ax.FontSize = 12;
-ylim([1e-4 1]);
+ylim([0 1]);
 yticks([1e-4 1e-3 1e-2 1e-1 1]);
 xlabel('SNR(dB)');
 ylabel('FER');
@@ -1050,10 +1062,10 @@ hold on;
 for i = 1:curveCount
     cidx = mod(i-1, numel(colors)) + 1;
     midx = mod(i-1, numel(marker)) + 1;
-
-    yplot = max(BER_curves{i}, 1e-4);
+    lidx = mod(i-1,numel(linestyleorder))+1;
+    yplot = BER_curves{i};
     semilogy(SNR_dB, yplot, 'LineWidth', 1.8, ...
-        'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8);
+        'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8,'LineStyle',linestyleorder{lidx});
 end
 grid on;
 grid minor;
@@ -1061,7 +1073,7 @@ ax = gca;
 ax.YScale = 'log';
 ax.YMinorGrid = 'on';
 ax.FontSize = 12;
-ylim([1e-4 1]);
+ylim([0 1]);
 yticks([1e-4 1e-3 1e-2 1e-1 1]);
 xlabel('SNR(dB)');
 ylabel('BER');
@@ -1073,10 +1085,10 @@ hold on;
 for i = 1:curveCount
     cidx = mod(i-1, numel(colors)) + 1;
     midx = mod(i-1, numel(marker)) + 1;
-
-    yplot = max(NMSE_curves{i}, 1e-5);
+    lidx = mod(i-1,numel(linestyleorder))+1;
+    yplot = NMSE_curves{i};
     semilogy(SNR_dB, yplot, 'LineWidth', 1.8, ...
-        'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8);
+        'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8,'LineStyle',linestyleorder{lidx});
 end
 grid on;
 grid minor;
@@ -1084,7 +1096,7 @@ ax = gca;
 ax.YScale = 'log';
 ax.YMinorGrid = 'on';
 ax.FontSize = 12;
-ylim([1e-5 1]);
+ylim([0 1]);
 yticks([1e-5 1e-4 1e-3 1e-2 1e-1 1]);
 xlabel('SNR(dB)');
 ylabel('Channel Operator NMSE');
