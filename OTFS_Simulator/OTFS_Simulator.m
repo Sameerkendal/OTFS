@@ -845,7 +845,7 @@ ax = gca;
 ax.YScale = 'log';
 ax.YMinorGrid = 'on';
 ax.FontSize = 12;
-ylim([1e-4 1]);
+ylim([0 1]);
 yticks([1e-4 1e-3 1e-2 1e-1 1]);
 xlabel('SNR(dB)');
 ylabel('FER');
@@ -859,7 +859,7 @@ for i = 1:curveCount
     cidx = mod(i-1, numel(colors)) + 1;
     midx = mod(i-1, numel(marker)) + 1;
 
-    yplot = max(BER_curves{i}, 1e-4);   % avoid log(0)
+    yplot = BER_curves{i};
     semilogy(SNR_dB, yplot, 'LineWidth', 1.8, ...
         'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8);
 end
@@ -869,7 +869,7 @@ ax = gca;
 ax.YScale = 'log';
 ax.YMinorGrid = 'on';
 ax.FontSize = 12;
-ylim([1e-4 1]);
+ylim([0 1]);
 yticks([1e-4 1e-3 1e-2 1e-1 1]);
 xlabel('SNR(dB)');
 ylabel('BER');
@@ -883,7 +883,7 @@ for i = 1:curveCount
     cidx = mod(i-1, numel(colors)) + 1;
     midx = mod(i-1, numel(marker)) + 1;
 
-    yplot = max(NMSE_curves{i}, 1e-5);   % avoid log(0)
+    yplot = NMSE_curves{i};
     semilogy(SNR_dB, yplot, 'LineWidth', 1.8, ...
         'Color', colors{cidx}, 'Marker', marker{midx}, 'MarkerSize', 8);
 end
@@ -893,7 +893,7 @@ ax = gca;
 ax.YScale = 'log';
 ax.YMinorGrid = 'on';
 ax.FontSize = 12;
-ylim([1e-5 1]);
+ylim([0 1]);
 yticks([1e-5 1e-4 1e-3 1e-2 1e-1 1]);
 xlabel('SNR(dB)');
 ylabel('Channel Operator NMSE');
